@@ -24,7 +24,9 @@ def read_urls_from_csv(csv_path: Path, column_name: str) -> List[str]:
     return urls
 
 
-def convert_urls_to_markdown(urls: List[str], output_dir: str = None) -> None:
+def convert_urls_to_markdown(
+    urls: List[str], output_dir: str = None, skip_existing: bool = True
+) -> None:
     # If no output directory is provided, use OBSIDIAN_PATH environment variable
     if output_dir is None:
         output_dir = os.getenv("OBSIDIAN_PATH")
@@ -34,18 +36,20 @@ def convert_urls_to_markdown(urls: List[str], output_dir: str = None) -> None:
                 type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
             )
 
+    output_path = Path(output_dir)
+
     # Show directory and ask for confirmation
-    print(f"Files will be saved to: {output_dir}")
+    print(f"Files will be saved to: {output_path}")
     if not click.confirm("Do you want to continue?", default=True):
         logger.info("Operation cancelled by user")
         return
 
     # Convert URLs to documents
-    converter = HtmlConverter()
+    converter = HtmlConverter(output_dir=output_path, skip_existing=skip_existing)
     documents = converter.convert_urls(urls)
 
     # Save documents to markdown files
-    writer = MarkdownWriter(Path(output_dir))
+    writer = MarkdownWriter(output_path)
     writer.save_documents(documents)
 
 
@@ -70,14 +74,28 @@ def convert_urls_to_markdown(urls: List[str], output_dir: str = None) -> None:
     "-o",
     help="Output directory for markdown files. Defaults to OBSIDIAN_PATH from environment variables",
 )
-def main(urls: tuple[str, ...], csv: Path, column: str, output_dir: str):
+@click.option(
+    "--no-skip-existing",
+    is_flag=True,
+    help="Process all URLs even if they've been successfully processed before",
+)
+def main(
+    urls: tuple[str, ...],
+    csv: Path,
+    column: str,
+    output_dir: str,
+    no_skip_existing: bool,
+):
     """Convert URLs to markdown files.
 
     Takes URLs either directly as arguments or from a CSV file and converts them to
     markdown files, using the last part of the URL path as the filename (in snake_case).
+
+    By default, URLs that have been successfully processed before will be skipped.
+    Use --no-skip-existing to force reprocessing of all URLs.
     """
     if not urls and not csv:
-        raise click.UsageError("Either --urls or --csv must be provided")
+        raise click.UsageError("Either URLs or --csv must be provided")
 
     if csv and not column:
         raise click.UsageError("--column must be provided when using --csv")
@@ -93,7 +111,11 @@ def main(urls: tuple[str, ...], csv: Path, column: str, output_dir: str):
     if not all_urls:
         raise click.UsageError("No URLs found to process")
 
-    convert_urls_to_markdown(all_urls, output_dir)
+    convert_urls_to_markdown(
+        all_urls,
+        output_dir=output_dir,
+        skip_existing=not no_skip_existing,
+    )
 
 
 if __name__ == "__main__":
