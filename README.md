@@ -21,17 +21,20 @@ Convert web articles to beautifully formatted Markdown files! Perfect for your O
 # Install dependencies
 uv sync
 
+# Create command-line alias (add to your ~/.bashrc, ~/.zshrc, or equivalent)
+alias l2m='uv run src/main.py'
+
 # Convert a single URL
-uv run src/main.py "https://example.com/article"
+l2m "https://example.com/article"
 
 # Convert multiple URLs
-uv run src/main.py "https://example.com/article1" "https://example.com/article2"
+l2m "https://example.com/article1" "https://example.com/article2"
 
 # Specify output directory
-uv run src/main.py -o ./notes "https://example.com/article"
+l2m -o ./notes "https://example.com/article"
 
 # Force reprocess existing URLs
-uv run src/main.py --no-skip-existing "https://example.com/article"
+l2m --no-skip-existing "https://example.com/article"
 ```
 
 ## 🔌 Chrome Extension Integration
