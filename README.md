@@ -10,6 +10,7 @@ Convert web articles to beautifully formatted Markdown files! Perfect for your O
 - 🎨 Clean and consistent formatting
 - 🔧 Configurable output directory
 - 🚀 Async processing for better performance
+- 🔌 Compatible with Instant Data Scraper Chrome extension for batch URL processing
 
 ## 🚀 Quick Start
 
@@ -25,6 +26,26 @@ uv run src/main.py "https://example.com/article1" "https://example.com/article2"
 
 # Specify output directory
 uv run src/main.py -o ./notes "https://example.com/article"
+```
+
+## 🔌 Chrome Extension Integration
+
+This tool works seamlessly with the [Instant Data Scraper](https://chrome.google.com/webstore/detail/instant-data-scraper/ofaokhiedipichpaobibbnahnkdoiiah) Chrome extension:
+
+1. Use Instant Data Scraper to collect URLs from any website
+2. Export the URLs as CSV
+3. Extract the URL column and save as a text file
+4. Process multiple URLs at once using:
+
+```bash
+qsv select -n 1 urls.csv | xargs uv run src/main.py
+```
+
+
+OR
+
+```bash
+uv run src/main.py --csv urls.csv --column "relative href"
 ```
 
 ## 🏗️ Code Structure
