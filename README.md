@@ -9,11 +9,12 @@ Convert web articles to beautifully formatted Markdown files! Perfect for your O
 - 📝 Smart title extraction from content
 - 🎨 Clean and consistent formatting
 - 🔧 Configurable output directory
-- 🚀 Async processing for better performance
-- 🔌 Compatible with Instant Data Scraper Chrome extension for batch URL processing
-- 📊 Metadata tracking with CSV files per domain
+- 🚀 Async batch processing for better performance
+- 🔌 Compatible with [Instant Data Scraper Chrome extension](https://chromewebstore.google.com/detail/instant-data-scraper/ofaokhiedipichpaobibbnahnkdoiiah)
+- 📊 Smart metadata tracking with domain-specific CSV files
 - ⏸️ Resume support for interrupted downloads
 - 🔁 Automatic retry handling for rate limits
+- 📈 Detailed progress logging and statistics
 
 ## 🚀 Quick Start
 
@@ -43,8 +44,7 @@ This tool works seamlessly with the [Instant Data Scraper](https://chrome.google
 
 1. Use Instant Data Scraper to collect URLs from any website
 2. Export the URLs as CSV
-3. Extract the URL column and save as a text file
-4. Process multiple URLs at once using:
+3. Process the CSV directly:
 
 ```bash
 qsv select -n 1 urls.csv | xargs uv run src/main.py
@@ -89,6 +89,25 @@ path,title,url,domain,status,error_str
 article1.md,First Article,https://example.com/1,example_com,success,
 article2.md,Second Article,https://example.com/2,example_com,rate_limited,"Rate limited - too many requests"
 ```
+
+### 🔁 Processing Flow
+
+1. **URL Filtering**:
+   - Checks URLs against domain-specific metadata
+   - Skips already processed URLs by default
+   - Shows clear summary of skipped/new URLs
+
+2. **Batch Processing**:
+   - Processes multiple URLs simultaneously
+   - Handles rate limiting gracefully
+   - Groups similar errors for better visibility
+
+3. **Progress Tracking**:
+   ```
+   Processing 15 new URLs out of 20 total
+   Skipping 5 already processed URLs
+   Processing complete: 12 successful, 2 rate limited, 1 failed
+   ```
 
 ### 🔁 Resume and Retry
 
