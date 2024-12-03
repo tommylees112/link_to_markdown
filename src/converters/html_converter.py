@@ -52,6 +52,8 @@ class HtmlConverter:
         md_transformer = MarkdownifyTransformer()
         converted_docs = md_transformer.transform_documents(docs, **markdownify_kwargs)
 
+        # NOTE: this is massively increasing the time taken to convert URLs. Looping through
+        # twice is not ideal.
         # Post-process to fix double bracket links
         processed_docs = []
         for doc in converted_docs:
