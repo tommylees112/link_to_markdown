@@ -2,6 +2,7 @@ import csv
 import os
 from pathlib import Path
 from typing import List
+from urllib.parse import quote, urlparse
 
 import click
 from loguru import logger
@@ -10,17 +11,60 @@ from converters.html_converter import HtmlConverter
 from converters.markdown_converter import MarkdownWriter
 
 
-def read_urls_from_csv(csv_path: Path, column_name: str) -> List[str]:
-    """Read URLs from a CSV file."""
+def read_urls_from_csv(
+    csv_path: Path, column: str = None, column_index: int = None
+) -> List[str]:
+    """Read URLs from a CSV file using either column name or index."""
     urls = []
     with open(csv_path) as f:
         reader = csv.DictReader(f)
-        if column_name not in reader.fieldnames:
-            available_columns = ", ".join(reader.fieldnames)
+
+        # Validate column specification
+        if column and column_index is not None:
             raise click.BadParameter(
-                f"Column '{column_name}' not found in CSV. Available columns: {available_columns}"
+                "Please specify either --column or --column-index, not both"
             )
-        urls = [row[column_name] for row in reader if row[column_name]]
+
+        if column:
+            if column not in reader.fieldnames:
+                available_columns = ", ".join(reader.fieldnames)
+                raise click.BadParameter(
+                    f"Column '{column}' not found in CSV. Available columns: {available_columns}"
+                )
+            get_value = lambda row: row[column]
+        elif column_index is not None:
+            if column_index >= len(reader.fieldnames):
+                raise click.BadParameter(
+                    f"Column index {column_index} is out of range. Max index: {len(reader.fieldnames) - 1}"
+                )
+            get_value = lambda row: list(row.values())[column_index]
+        else:
+            raise click.BadParameter(
+                "Either --column or --column-index must be specified"
+            )
+
+        for row in reader:
+            url = get_value(row)
+            if not url:
+                continue
+
+            # Clean and validate URL
+            try:
+                # Check if it's a full URL
+                parsed = urlparse(url)
+                if not parsed.scheme:
+                    # If no scheme, assume it's a relative path and encode it
+                    url = quote(url)
+                    logger.warning(
+                        f"Found relative path: {url}, you might need to add the base URL"
+                    )
+                    continue
+                urls.append(url)
+            except Exception as e:
+                logger.warning(f"Skipping invalid URL '{url}': {e}")
+                continue
+
+    logger.info(f"Found {len(urls)} valid URLs in CSV file")
     return urls
 
 
@@ -33,14 +77,23 @@ def convert_urls_to_markdown(
         if not output_dir:
             output_dir = click.prompt(
                 "Please enter the output directory path OR set OBSIDIAN_PATH environment variable",
-                type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+                type=click.Path(
+                    exists=False, file_okay=False, dir_okay=True, path_type=Path
+                ),
             )
 
     output_path = Path(output_dir)
 
+    # Create directory if it doesn't exist
+    output_path.mkdir(parents=True, exist_ok=True)
+
     # Show directory and ask for confirmation
-    print(f"Files will be saved to: {output_path}")
-    if not click.confirm("Do you want to continue?", default=True):
+    click.echo(f"\nFiles will be saved to: {output_path}")
+    try:
+        if not click.confirm("\nDo you want to continue?", default=True):
+            logger.info("Operation cancelled by user")
+            return
+    except click.exceptions.Abort:
         logger.info("Operation cancelled by user")
         return
 
@@ -58,7 +111,7 @@ def convert_urls_to_markdown(
     "urls",
     nargs=-1,
     required=False,
-    metavar="URLS...",  # Makes the help output clearer
+    metavar="URLS...",
 )
 @click.option(
     "--csv",
@@ -70,8 +123,14 @@ def convert_urls_to_markdown(
     help="Column name in CSV containing URLs",
 )
 @click.option(
+    "--column-index",
+    type=int,
+    help="Column index (0-based) in CSV containing URLs",
+)
+@click.option(
     "--output-dir",
     "-o",
+    type=click.Path(exists=False, file_okay=False, dir_okay=True, path_type=Path),
     help="Output directory for markdown files. Defaults to OBSIDIAN_PATH from environment variables",
 )
 @click.option(
@@ -83,30 +142,30 @@ def main(
     urls: tuple[str, ...],
     csv: Path,
     column: str,
+    column_index: int,
     output_dir: str,
     no_skip_existing: bool,
 ):
-    """Convert URLs to markdown files.
-
-    Takes URLs either directly as arguments or from a CSV file and converts them to
-    markdown files, using the last part of the URL path as the filename (in snake_case).
-
-    By default, URLs that have been successfully processed before will be skipped.
-    Use --no-skip-existing to force reprocessing of all URLs.
-    """
+    """Convert URLs to markdown files."""
     if not urls and not csv:
         raise click.UsageError("Either URLs or --csv must be provided")
 
-    if csv and not column:
-        raise click.UsageError("--column must be provided when using --csv")
+    if csv and not (column or column_index is not None):
+        raise click.UsageError(
+            "Either --column or --column-index must be provided when using --csv"
+        )
 
     all_urls = list(urls)
 
     if csv:
         logger.info(f"Reading URLs from CSV file: {csv}")
-        csv_urls = read_urls_from_csv(csv, column)
-        logger.info(f"Found {len(csv_urls)} URLs in CSV file")
-        all_urls.extend(csv_urls)
+        try:
+            csv_urls = read_urls_from_csv(csv, column=column, column_index=column_index)
+            if not csv_urls:
+                raise click.UsageError("No valid URLs found in CSV file")
+            all_urls.extend(csv_urls)
+        except Exception as e:
+            raise click.UsageError(f"Error reading CSV file: {e}")
 
     if not all_urls:
         raise click.UsageError("No URLs found to process")
