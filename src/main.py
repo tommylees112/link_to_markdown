@@ -69,7 +69,10 @@ def read_urls_from_csv(
 
 
 def convert_urls_to_markdown(
-    urls: List[str], output_dir: str = None, skip_existing: bool = True
+    urls: List[str],
+    output_dir: str = None,
+    skip_existing: bool = True,
+    force: bool = False,
 ) -> None:
     # If no output directory is provided, use OBSIDIAN_PATH environment variable
     if output_dir is None:
@@ -87,15 +90,18 @@ def convert_urls_to_markdown(
     # Create directory if it doesn't exist
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Show directory and ask for confirmation
+    # Show directory and ask for confirmation (unless force is True)
     click.echo(f"\nFiles will be saved to: {output_path}")
-    try:
-        if not click.confirm("\nDo you want to continue?", default=True):
+    if not force:
+        try:
+            if not click.confirm("\nDo you want to continue?", default=True):
+                logger.info("Operation cancelled by user")
+                return
+        except click.exceptions.Abort:
             logger.info("Operation cancelled by user")
             return
-    except click.exceptions.Abort:
-        logger.info("Operation cancelled by user")
-        return
+    else:
+        logger.info("Force mode enabled - skipping confirmation prompts")
 
     # Convert URLs to documents
     converter = HtmlConverter(output_dir=output_path, skip_existing=skip_existing)
@@ -138,6 +144,12 @@ def convert_urls_to_markdown(
     is_flag=True,
     help="Process all URLs even if they've been successfully processed before",
 )
+@click.option(
+    "--force",
+    "-f",
+    is_flag=True,
+    help="Skip all confirmation prompts",
+)
 def main(
     urls: tuple[str, ...],
     csv: Path,
@@ -145,6 +157,7 @@ def main(
     column_index: int,
     output_dir: str,
     no_skip_existing: bool,
+    force: bool,
 ):
     """Convert URLs to markdown files."""
     if not urls and not csv:
@@ -174,6 +187,7 @@ def main(
         all_urls,
         output_dir=output_dir,
         skip_existing=not no_skip_existing,
+        force=force,
     )
 
 

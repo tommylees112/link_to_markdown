@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain_community.document_transformers import MarkdownifyTransformer
@@ -66,13 +67,39 @@ class HtmlConverter:
         Returns:
             Tuple of (urls_to_process, skipped_urls)
         """
-        if not self.metadata_manager:
-            return urls, []
-
-        urls_to_process = []
+        # Filter out invalid URLs first
+        valid_urls = []
         skipped_urls = []
 
         for url in urls:
+            # Skip empty URLs or non-string values
+            if not url or not isinstance(url, str):
+                skipped_urls.append(url)
+                continue
+
+            # Skip URLs that are just fragments like 'href' or '#'
+            if url.lower() in ["href", "#"] or url.startswith("#"):
+                skipped_urls.append(url)
+                continue
+
+            # Basic URL validation
+            try:
+                parsed = urlparse(url)
+                if not parsed.scheme or not parsed.netloc:
+                    skipped_urls.append(url)
+                    continue
+                valid_urls.append(url)
+            except Exception:
+                skipped_urls.append(url)
+                continue
+
+        # Process metadata filtering only for valid URLs
+        if not self.metadata_manager:
+            return valid_urls, skipped_urls
+
+        # determine which urls we have already processed from the metadata.csv !
+        urls_to_process = []
+        for url in valid_urls:
             domain = get_directory_from_url(url)
             if self.metadata_manager.should_process_url(url, domain):
                 urls_to_process.append(url)
