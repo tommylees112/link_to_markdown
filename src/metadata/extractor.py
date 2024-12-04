@@ -4,7 +4,7 @@ from typing import Dict, Set
 
 from loguru import logger
 
-from models.metadata import ArticleMetadata
+from src.models.metadata import ArticleMetadata
 
 
 class MetadataManager:

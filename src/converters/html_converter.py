@@ -7,11 +7,11 @@ from langchain_community.document_loaders import AsyncHtmlLoader
 from langchain_community.document_transformers import MarkdownifyTransformer
 from loguru import logger
 
-from metadata.extractor import MetadataManager
-from models.document import Document
-from models.metadata import ArticleMetadata
-from utils.text_utils import extract_title_from_content
-from utils.url_utils import get_directory_from_url
+from src.metadata.extractor import MetadataManager
+from src.models.document import Document
+from src.models.metadata import ArticleMetadata
+from src.utils.text_utils import extract_title_from_content
+from src.utils.url_utils import get_directory_from_url
 
 
 class HtmlConverter:

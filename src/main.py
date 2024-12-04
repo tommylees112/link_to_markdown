@@ -7,8 +7,8 @@ from urllib.parse import quote, urlparse
 import click
 from loguru import logger
 
-from converters.html_converter import HtmlConverter
-from converters.markdown_converter import MarkdownWriter
+from src.converters.html_converter import HtmlConverter
+from src.converters.markdown_converter import MarkdownWriter
 
 
 def read_urls_from_csv(

@@ -3,7 +3,7 @@ from typing import List
 
 from loguru import logger
 
-from models.document import Document
+from src.models.document import Document
 
 
 class MarkdownWriter:

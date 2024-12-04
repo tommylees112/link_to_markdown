@@ -22,8 +22,8 @@ Convert web articles to beautifully formatted Markdown files! Perfect for your O
 # Install dependencies
 uv sync
 
-# Create command-line alias (add to your ~/.bashrc, ~/.zshrc, or equivalent)
-alias l2m='uv run src/main.py'
+# Create command-line alias for local use
+uv run pipx install .
 
 # Convert a single URL
 l2m "https://example.com/article"
